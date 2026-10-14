@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Техника — галерея моделей</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#171d21;color:#e5e9e5;font:15px system-ui,sans-serif}button,input,select{font:inherit}button,select,input[type=search]{background:#293238;border:1px solid #4c5a60;color:inherit;border-radius:7px;padding:8px}button{cursor:pointer}button.active{border-color:#d2ad67;background:#423c2f}header{padding:20px 24px;border-bottom:1px solid #3b4548}h1{font-size:24px;margin:0 0 7px}header p{margin:0;color:#aebbbd}.layout{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100vh - 100px)}aside{padding:16px;border-right:1px solid #3b4548}aside input{width:100%;margin-bottom:10px}.filters{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px}.filters button{font-size:12px;padding:6px}#list{display:grid;gap:5px}#list button{text-align:left;background:transparent}#list button.active{background:#423c2f}main{padding:20px;min-width:0}h2{margin:0 0 6px;font-size:22px}#details{color:#c5cbc7;margin:0 0 14px}.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:12px 0}.controls label{display:flex;align-items:center;gap:8px}.controls input[type=range]{width:135px;accent-color:#d2ad67}canvas{display:block;width:100%;height:auto;background:#b1a17e;border-radius:8px;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}.hint{color:#aebbbd;font-size:13px}#error{color:#ffb7aa;white-space:pre-wrap}.sheet header,.sheet .layout{display:none}.sheet #sheet{display:block;border-radius:0;width:1200px;height:1060px}.sheet{background:#b1a17e}#sheet{display:none}@media(max-width:760px){.layout{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #3b4548}#list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:220px;overflow:auto}main{padding:12px}}
+</style>
+</head>
+<body>
+<header><h1>Техника · галерея игровых моделей</h1><p>Все 26 моделей из игры. Выбери технику, поверни корпус и башни, сравни масштаб с человеком.</p></header>
+<div class="layout"><aside><input id="search" type="search" placeholder="Название техники" aria-label="Поиск техники"><div class="filters" id="filters"></div><nav id="list" aria-label="Каталог техники"></nav></aside>
+<main><h2 id="name"></h2><p id="details"></p>
+<div class="controls"><label>Качество <select id="quality"><option value="high">Высокое</option><option value="medium">Среднее</option><option value="low">Низкое</option></select></label><button id="rotate">Вращать</button><button id="reset">Сбросить вид</button><button id="save">Сохранить PNG</button></div>
+<div class="controls"><label>Корпус <input id="heading" type="range" min="0" max="359" value="315"><output id="degrees">315°</output></label><label>Башня <input id="turret" type="range" min="0" max="7" value="7"></label><label>Кормовая <input id="rear" type="range" min="0" max="7" value="3"></label><label>Масштаб <input id="zoom" type="range" min="50" max="500" value="100"></label></div>
+<div class="controls"><label><input type="checkbox" id="moving">На ходу</label><label><input type="checkbox" id="hero" checked>Человек в том же масштабе</label><label><input type="checkbox" id="wreck">Повреждённый корпус</label></div>
+<canvas id="view" width="1100" height="720"></canvas><p class="hint">Перетаскивай изображение мышью. «Акула» показана целиком; увеличь масштаб, чтобы рассмотреть рубку, люки и броню.</p><pre id="error"></pre></main></div>
+<canvas id="sheet" width="1200" height="1060"></canvas>
+<script src="../shared/worldgen.js"></script><script src="../shared/items.js"></script><script src="../shared/vehicles.js"></script>
+<script type="module" src="./js/vehicle-gallery.js"></script>
+</body></html>

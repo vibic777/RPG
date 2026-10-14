@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="../client/css/style.css"><style>#screen-game{position:relative;width:100vw;height:100vh}.fixture{position:absolute;width:350px;height:200px;top:80px;left:30px;background:#222}</style><section id="screen-game"></section><pre id="result">RUNNING</pre><script type="module">
+import {floatingWindow,restorePanel,replacePanelHtml} from '../client/js/floating-window.js';
+const results=[];const wait=()=>new Promise(r=>setTimeout(r,60));
+function check(name,ok){results.push({name,ok});if(!ok)throw Error(name);}
+try{
+for(const id of ['hud-map','comp-bar','cheat-panel','admin-panel','attack-mode-controls','inv-window','build-window','craft-window','chest-window','auto-loot-controls','auto-combat-controls','perf-overlay','hud-top']){
+ const el=document.createElement('div');el.id=id;el.className='fixture';el.innerHTML='<div class="inv-head"><b>Заголовок</b></div><div>Содержимое</div>';document.querySelector('#screen-game').append(el);
+ const c=floatingWindow(el,{header:'.inv-head',title:id,icon:'⚔'});await wait();
+ c.setMode('iconified');await wait();el.querySelector('.panel-window-icon').click();await wait();check(id+' icon restore',c.mode==='normal'&&el.getBoundingClientRect().width>160);
+ el.querySelector('[data-panel-action="collapse"]').click();await wait();check(id+' hide to icon',c.mode==='iconified');el.querySelector('.panel-window-icon').click();await wait();el.querySelector('[data-panel-action="normal"]').click();check(id+' normal view',c.mode==='normal');
+ const header=el.querySelector('.panel-window-header');replacePanelHtml(el,'<div class="inv-head"><b>Обновлено</b></div><div>Новое содержимое</div>');await wait();check(id+' stable header',header===el.querySelector('.panel-window-header')&&!!el.querySelector('.panel-window-icon'));
+ el.style.width='44px';el.style.height='44px';c.setMode('normal');await wait();check(id+' repair size',el.getBoundingClientRect().width>160&&el.getBoundingClientRect().height>90);
+ el.style.left='5000px';el.style.top='5000px';c.refresh();await wait();let r=el.getBoundingClientRect();check(id+' clamp',r.right<=innerWidth&&r.bottom<=innerHeight&&r.left>=0&&r.top>=0);
+ el.setPointerCapture=()=>{};el.hasPointerCapture=()=>false;header.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:1,clientX:r.left+10,clientY:r.top+10}));el.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:1,clientX:-500,clientY:-500}));el.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1}));r=el.getBoundingClientRect();check(id+' drag bounded',r.left>=0&&r.top>=0&&r.left<=9);
+ c.closePanel();await wait();check(id+' closes',el.classList.contains('hidden'));
+ const recovery=document.querySelector('[data-restore-panel="'+id+'"]');if(['hud-map','comp-bar','attack-mode-controls','auto-loot-controls','auto-combat-controls','perf-overlay','hud-top'].includes(id)){check(id+' recovery exists',!!recovery);recovery.click();}else restorePanel(id);
+ await wait();check(id+' reopens',!el.classList.contains('hidden')&&c.mode==='normal');el.classList.add('hidden');
+}
+document.querySelector('#result').textContent=JSON.stringify({passed:results.length,results});
+}catch(e){document.querySelector('#result').textContent=JSON.stringify({error:e.message,results});}
+</script>

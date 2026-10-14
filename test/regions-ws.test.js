@@ -1,0 +1,37 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {startServer,api,newPlayer,joinWorld}=require('./helpers');
+const G=require('../shared/worldgen'),R=require('../shared/regions'),L=require('../shared/levels');require('../shared/settlements');
+test('WS: walk between regions, enter a local dungeon, return, reconnect in the same region',async t=>{
+ const s=await startServer(['--set','game.depotsPer256=0','--set','game.survivalFoodPerMin=0','--set','game.survivalWaterPerMin=0']);t.after(()=>s.stop());
+ t.after(()=>{if(t.signal.aborted)console.log(s.output());});
+ const p=await newPlayer(s.base,'admin','Путник');
+ const created=await api(s.base,'POST','/api/worlds',{name:'Мир переходов',seed:'regions-ws',size:'small',enemyDensity:'none',hordeFrequency:'never',dragons:0,scaleToLevel:false},p.token);
+ assert.equal(created.status,200,JSON.stringify(created.data));const w=created.data.world;
+ G.configure({depotsPer256:0});L.configure({depotsPer256:0});
+ const root=G.generate(w),gate=R.portals(root).find(g=>g.direction==='E');
+ let c=await joinWorld(s.base,p,w.id);t.after(()=>c.close());assert.ok(c.welcome);
+ const quest=await api(s.base,'POST','/api/admin/quests/act',{worldId:w.id,act:'grant',id:'m2_baron'},p.token);assert.equal(quest.status,200,JSON.stringify(quest.data));
+ const log=await c.next(m=>m.t==='quests'&&m.active.some(q=>q.id==='m2_baron'));
+ assert.equal(log.active.find(q=>q.id==='m2_baron').regionKey,'region_1_1');assert.equal(log.active.find(q=>q.id==='m2_baron').where.travel,true);
+ const tp=async(x,y)=>{const r=await api(s.base,'POST','/api/admin/teleport',{x:x+.5,y:y+.5},p.token);assert.equal(r.status,200,JSON.stringify(r.data));await c.next('teleported');};
+ await tp(gate.x,gate.y);c.send({t:'lvl-go'});t.diagnostic('requested first region');
+ const welcome=await c.next(m=>['welcome','lvl-reject','error'].includes(m.t),12000);assert.equal(welcome.t,'welcome',JSON.stringify(welcome)+'\n'+s.output());assert.equal(welcome.level.key,'region_1_0');assert.equal(welcome.level.surfaceRegion,true);assert.ok(welcome.towns.length>0);t.diagnostic('entered region');
+ const region=L.level(root,'region_1_0'),entry=L.entrances(region).find(e=>!e.disabled&&e.kind==='hatch'&&e.type==='bunker');assert.ok(entry);
+ await tp(entry.x,entry.y);c.send({t:'lvl-go'});const dungeon=await c.next(m=>['welcome','lvl-reject','error'].includes(m.t),12000);assert.equal(dungeon.t,'welcome',JSON.stringify(dungeon)+'\n'+s.output());assert.ok(dungeon.level.key.startsWith('region_1_0!'));t.diagnostic('entered dungeon');
+ c.send({t:'lvl-go'});const back=await c.next('welcome',12000);assert.equal(back.level.key,'region_1_0');
+ c.send({t:'lvl-go'});const revisited=await c.next(m=>m.t==='welcome'&&m.level?.key===dungeon.level.key,12000);for(const item of dungeon.ground)assert.ok(revisited.ground.some(x=>x.gid===item.gid),'dungeon loot survives room unload');
+ c.send({t:'lvl-go'});await c.next(m=>m.t==='welcome'&&m.level?.key==='region_1_0',12000);
+ // Move before disconnect so position persistence runs; reconnect must retain the region key.
+ const exit=R.portals(region).find(g=>g.direction==='S');await tp(exit.x,exit.y);await c.close();
+ c=await joinWorld(s.base,p,w.id);assert.equal(c.welcome.level.key,'region_1_0');
+ const me=c.welcome.players.find(x=>x.id===c.welcome.you);assert.ok(Math.hypot(me.x-(exit.x+.5),me.y-(exit.y+.5))<3);
+ const spawned=await api(s.base,'POST','/api/admin/vehicles/spawn',{def:'car',own:true,wreck:true,x:exit.x+.5,y:exit.y+.5},p.token);assert.equal(spawned.status,200,JSON.stringify(spawned.data));const car=spawned.data.vehicle;
+ c.send({t:'veh-enter',id:car.id});assert.equal((await c.next(m=>m.t==='veh-seat'&&m.id===car.id)).seat,0);
+ const repairing=await c.next(m=>m.t==='veh-upd'&&m.v.id===car.id&&m.v.hp>car.hp,5000);assert.ok(repairing.v.hp<car.maxHp*.25,'free repair is slow');
+ const given=await api(s.base,'POST','/api/admin/items/give',{username:'admin',item:'veh_parts',count:5},p.token);assert.equal(given.status,200,JSON.stringify(given.data));
+ c.send({t:'veh-repair',id:car.id});await c.next(m=>m.t==='veh-upd'&&m.v.id===car.id&&m.v.hp===car.maxHp,5000);
+ c.send({t:'lvl-go'});const driven=await c.next(m=>['welcome','lvl-reject'].includes(m.t),12000);assert.equal(driven.t,'welcome',JSON.stringify(driven));assert.equal(driven.level.key,'region_1_1');
+ assert.ok(driven.vehicles.some(v=>v.id===car.id&&v.hp===car.maxHp));
+ const parts=(await api(s.base,'GET','/api/characters/'+p.characterId,undefined,p.token)).data.character.inventory.cells.filter(x=>x?.id==='veh_parts').reduce((n,x)=>n+x.n,0);assert.equal(parts,0,'instant repair actually consumed parts');
+});

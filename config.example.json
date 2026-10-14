@@ -1,0 +1,41 @@
+{
+  "_comment": "Скопируйте в config.json и измените нужное. Приоритет: флаги командной строки > переменные окружения > config.json > значения по умолчанию. Справка: npm start -- --help",
+  "port": 3333,
+  "host": "0.0.0.0",
+  "dataDir": "data",
+  "autoPort": false,
+  "autoPortTries": 20,
+  "open": false,
+  "logging": {
+    "enabled": false,
+    "directory": "log",
+    "levels": {
+      "trace": true,
+      "debug": true,
+      "info": true,
+      "warn": true,
+      "error": true,
+      "fatal": true
+    }
+  },
+  "maxBodyKb": 16,
+  "sessionTtlDays": 30,
+  "loginFailLimit": 10,
+  "loginFailWindowMin": 5,
+  "usernameMin": 3,
+  "usernameMax": 20,
+  "passwordMin": 6,
+  "passwordMax": 128,
+  "game": {
+    "maxCharacters": 8,
+    "startPoints": 12,
+    "startStatCap": 6,
+    "companionsMax": 11,
+    "maxScars": 3,
+    "maxTattoos": 4,
+    "maxImplants": 4,
+    "vehicleAutoRepairPctPerSec": 0.25,
+    "enemyRegenPctPerSec": 0.25,
+    "npcRegenPerSec": 0.5
+  }
+}

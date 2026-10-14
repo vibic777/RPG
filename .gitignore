@@ -1,0 +1,89 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+*.suo
+*.user
+
+# Logs and temp
+*.log
+*.tmp
+tmp/
+temp/
+
+# Environment / secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+build/
+releases/
+
+# Godot
+.godot/
+.import/
+export_presets.cfg
+
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# Game runtime data (accounts, characters, worlds)
+data/
+data-backups/
+log/
+
+# Local settings (see config.example.json)
+config.json
+
+# Temporary Visual C++/IDE working files
+.tmp-vc/
+
+# Local secrets, signing material, and private runtime data
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.template
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+local.properties
+credentials/
+secrets/
+*credentials*.json
+*secret*.json
+*.sqlite*
+*.db
+*.db-*
+*.session
+*.session-journal
+.vscode/
+.idea/workspace.xml
+.idea/tasks.xml
+!credentials*.example.json
+!*credentials*.example.json
+!*secret*.example.json

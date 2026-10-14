@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Наследие Ржавчины и Магии</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Вход / регистрация -->
+    <section id="screen-auth" class="screen hidden">
+      <div class="panel auth-panel">
+        <h1 class="title">Наследие<br><span>Ржавчины и Магии</span></h1>
+        <div class="tabs">
+          <button type="button" class="tab active" data-mode="login" title="Войти в существующий аккаунт">Вход</button>
+          <button type="button" class="tab" data-mode="register" title="Создать новый аккаунт. Первый аккаунт на сервере становится администратором">Регистрация</button>
+        </div>
+        <form id="auth-form" autocomplete="on">
+          <label>Имя
+            <input name="username" required minlength="3" maxlength="20" autocomplete="username"
+                   pattern="[A-Za-zА-Яа-яЁё0-9_\-]{3,20}" title="3–20 символов: буквы, цифры, _ или -">
+          </label>
+          <label>Пароль
+            <input name="password" type="password" required minlength="6" maxlength="128" autocomplete="current-password" title="От 6 до 128 символов">
+          </label>
+          <label class="confirm hidden">Повторите пароль
+            <input name="password2" type="password" minlength="6" maxlength="128" autocomplete="new-password" title="Введите пароль ещё раз">
+          </label>
+          <div id="auth-error" class="error" role="alert"></div>
+          <button type="submit" class="btn primary" id="auth-submit">Войти</button>
+          <p class="muted small center">Нажмите «?» или F1 — справка по игре.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Список персонажей -->
+    <section id="screen-characters" class="screen hidden">
+      <div class="panel wide">
+        <header class="bar">
+          <div>Вы вошли как <b id="home-username"></b> <span id="home-role" class="badge hidden" title="Администратор (гейм-мастер) сервера">Администратор</span></div>
+          <button type="button" class="btn" id="btn-logout" title="Выйти из аккаунта">Выйти</button>
+        </header>
+        <div class="bar">
+          <h2>Ваши персонажи</h2>
+          <button type="button" class="btn auto" id="btn-import-character" title="Загрузить героя из файла, сохранённого кнопкой «В файл». Свой файл возвращает героя целиком; файл с другого сервера или изменённый — только имя и внешность (так настроено на сервере).">Загрузить из файла</button>
+          <input type="file" id="import-file" accept=".json,application/json" hidden>
+          <button type="button" class="btn primary auto" id="btn-new-character">Создать персонажа</button>
+        </div>
+        <p class="muted small">Персонаж хранится отдельно от миров: одним героем можно играть в любом мире.</p>
+        <div id="character-list" class="card-grid"></div>
+      </div>
+    </section>
+
+    <!-- Создание персонажа -->
+    <section id="screen-create" class="screen hidden">
+      <form id="create-form" class="panel wide create" autocomplete="off">
+        <header class="bar">
+          <h2>Создание персонажа</h2>
+          <button type="button" class="btn" id="btn-create-back" title="Вернуться к списку без сохранения">Назад</button>
+        </header>
+        <div class="create-grid">
+          <div class="create-left">
+            <canvas id="create-preview" width="260" height="420" title="Предпросмотр внешности"></canvas>
+            <label>Имя героя
+              <input id="create-name" maxlength="24" required placeholder="Например: Айра Ржавая"
+                     title="2–24 символа, начинается с буквы; буквы, цифры, пробел, «-» и «'»">
+            </label>
+            <button type="button" class="btn" id="btn-create-random" title="Случайно подобрать внешность (пол сохраняется)">Случайная внешность</button>
+          </div>
+          <div class="create-mid">
+            <h3>Внешность</h3>
+            <div id="appearance-options"></div>
+          </div>
+          <div class="create-right">
+            <h3>Характеристики</h3>
+            <p class="muted small" title="Очки можно распределить сейчас или оставить на потом">Свободных очков: <b id="points-left"></b>. Минимум у каждой — 1. Наведите на характеристику, чтобы узнать, что она даёт.</p>
+            <div id="stat-rows"></div>
+            <p id="derived" class="small" title="Здоровье зависит от Силы, выносливость — от Силы и Скрытности, мана — от Магии и Интеллекта"></p>
+            <button type="button" class="btn" id="btn-stats-reset" title="Вернуть все характеристики к 1">Сбросить очки</button>
+          </div>
+        </div>
+        <div id="create-error" class="error" role="alert"></div>
+        <button type="submit" class="btn primary" id="btn-create-submit" title="Сохранить героя. Имя и внешность пока нельзя изменить после создания">Создать персонажа</button>
+      </form>
+    </section>
+
+    <!-- Миры -->
+    <section id="screen-worlds" class="screen hidden">
+      <div class="panel wide">
+        <header class="bar">
+          <h2>Миры — герой <span id="worlds-character"></span></h2>
+          <button type="button" class="btn" id="btn-worlds-back" title="Вернуться к списку персонажей">Назад</button>
+        </header>
+        <div class="worlds-grid">
+          <div>
+            <h3>Миры</h3>
+            <p class="muted small">Мир хранится отдельно от героя: любым персонажем можно войти в любой доступный мир. Позиция героя запоминается для каждого мира. Чтобы играть вместе, откройте мир и дайте другу код приглашения.</p>
+            <form id="join-form" class="join-form" autocomplete="off" title="Код приглашения даёт владелец мира. После этого мир появится в вашем списке как «чужой мир»">
+              <input id="join-code" maxlength="20" placeholder="Код приглашения" title="Код из 8 символов, например K7QX2MPA">
+              <button type="submit" class="btn" id="btn-join" title="Присоединиться к чужому миру по коду">Присоединиться по коду</button>
+            </form>
+            <div id="join-error" class="small muted" role="status"></div>
+            <div id="world-list"></div>
+          </div>
+          <form id="world-form" class="world-form" autocomplete="off">
+            <h3>Новый мир</h3>
+            <label title="Название мира в списке">Название
+              <input id="world-name" maxlength="32" required placeholder="Например: Пустоши Севера">
+            </label>
+            <label title="Сид определяет карту. Одинаковый сид и размер дают одинаковый мир — сидом можно поделиться с друзьями">Сид
+              <span class="row"><input id="world-seed" maxlength="32" required pattern="[A-Za-zА-Яа-яЁё0-9_\-]{1,32}">
+              <button type="button" class="btn" id="btn-seed-random" title="Случайный сид">🎲</button></span>
+            </label>
+            <label title="Сторона карты в клетках. Большие миры дольше генерируются и требуют больше памяти">Размер
+              <select id="world-size"></select>
+            </label>
+              <label title="Форма материков и береговой линии; сид определяет карту для всех игроков">Форма карты
+                <select id="world-shape"></select>
+              </label>
+            <label title="Отдельный выбор водоёмов: суша, озёра, материк с морем или архипелаг. Игроки — союзники против мира">Водоёмы
+              <select id="world-water"></select>
+            </label>
+            <label data-help="h-server" title="Сложность врагов и последствия смерти. Выбор сохраняется в мире; его можно изменить во время игры.">Сложность игры
+              <select id="world-difficulty" required></select>
+            </label>
+            <label title="Плотность врагов в мире">Плотность врагов
+              <select id="world-enemies"></select>
+            </label>
+            <label title="Как часто по пустошам будут проходить орды зомби">Частота орд зомби
+              <select id="world-hordes"></select>
+            </label>
+            <label title="Сколько логов драконов будет на карте. Драконы — одиночки, опасны, если их спровоцировать; их можно приручить">Драконов: <b id="world-dragons-value"></b>
+              <input id="world-dragons" type="range" min="0" max="20" step="1">
+            </label>
+            <label class="check" title="Голод, жажда, усталость и радиация. Выключите, чтобы играть без них">
+              <input id="world-survival" type="checkbox" checked> Выживание (голод, жажда, усталость, радиация)
+            </label>
+            <label title="Как быстро падают сытость, вода и бодрость и копится радиация">Сложность выживания
+              <select id="world-survival-diff"></select>
+            </label>
+            <p class="small muted">Уровень обычных врагов автоматически подстраивается под уровень группы. Боссы сильнее, но медленнее.</p>
+            <label class="check hidden" id="world-ngplus-row" title="Герой прошёл игру (есть концовка): начать новый мир этим героем и со своей базой. Враги в таком мире слабее.">
+              <input id="world-ngplus" type="checkbox"> «Новая игра+» (герой и база переходят, мир легче)
+            </label>
+            <div id="world-error" class="error" role="alert"></div>
+            <button type="submit" class="btn primary" id="btn-world-create" title="Сгенерировать мир с этими настройками">Создать мир</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Игра -->
+    <section id="screen-game" class="screen game hidden">
+      <canvas id="game-canvas" title=""></canvas>
+      <div id="hud-top" class="hud-panel">
+        <div class="hud-title"><b id="hud-name"></b> <span id="hud-level" title="Уровень героя: растёт с опытом за победы над врагами"></span></div>
+        <div class="hud-world muted small" id="hud-world" title="Текущий мир"></div>
+        <div class="bar-hud hp" id="bar-hp" title="Здоровье. Медленно восстанавливается вне боя, быстрее — едой и аптечками. При нуле — смерть и потеря 1 очка случайной характеристики"><div class="fill"></div><span class="lbl">Здоровье</span><span class="val"></span></div>
+        <div class="bar-hud st" id="bar-stamina" title="Выносливость. Тратится на удары в ближнем бою и бег (пробел), сама восстанавливается, быстрее — водой"><div class="fill"></div><span class="lbl">Выносливость</span><span class="val"></span></div>
+        <div class="bar-hud mp" id="bar-mp" title="Мана. Тратится на магическое оружие и заклинания, восстанавливается сама"><div class="fill"></div><span class="lbl">Мана</span><span class="val"></span></div>
+        <div class="bar-hud air hidden" id="bar-air" title="Воздух под водой (шаг 13). Кончится — удушье. Акваланг (слот «Лицо») даёт большой запас, баллон с воздухом пополняет его"><div class="fill"></div><span class="lbl">Воздух</span><span class="val"></span></div>
+        <div id="hud-surv" class="hidden" title="Выживание: сытость, вода, бодрость, радиация. Наведите на шкалу — подсказка. Z — отдых, G — попить из реки">
+          <div class="surv-meters"></div>
+          <div class="surv-notes small hidden"></div>
+        </div>
+        <div class="bar-hud xp" id="bar-xp" title="Опыт: за победы над врагами (делится между героями рядом). Полная полоска — новый уровень и очки характеристик"><div class="fill"></div><span class="lbl">Опыт</span><span class="val"></span></div>
+        <div class="commerce-actions"><button type="button" class="btn small" id="btn-commerce">Обмен и лавки</button><button type="button" class="btn small hidden" id="btn-commerce-close-all">Свернуть все лавки</button></div>
+      </div>
+      <div id="target-frame" class="hud-panel hidden" title="Цель: враг под курсором или выбранный для атаки">
+        <div class="tf-name"><b id="tf-name"></b> <span id="tf-level" class="muted small"></span></div>
+        <div class="bar-hud hp" id="tf-hp"><div class="fill"></div><span class="lbl">Здоровье</span><span class="val"></span></div>
+        <div id="tf-info" class="muted small"></div>
+      </div>
+      <div id="perf-overlay" class="hud-panel perf-overlay hidden" title="Производительность: FPS (кадров в секунду / предел), время кадра, пинг до сервера, тик сервера (среднее / пик), трафик к вам, враги рядом (бодрые / всего в мире). F8 — скрыть"><span class="panel-window-header">📈 Производительность</span><span id="perf-overlay-content"></span></div>
+      <div id="hud-ammo" class="hud-panel small hidden" title="Оружие в руках: патроны в магазине / в сумке. R — перезарядить"></div>
+      <div id="hud-map" class="hud-panel">
+        <canvas id="minimap" width="220" height="114" title="Миникарта: красная точка — вы, голубые — другие игроки, белые — поселения, рамка — видимая область; чёрное — не разведано (туман войны). Щелчок или перетаскивание — посмотреть туда (камера отпускает героя), правая кнопка или Shift+щелчок — идти туда"></canvas>
+        <div id="hud-cam" class="small"><button type="button" class="btn small icon-button" id="btn-cam-follow" aria-label="Следование камеры за героем" data-icon-tooltip="Включить или отключить слежение камеры за героем · End" title="Включить или отключить слежение камеры за героем · End">🔒</button><button type="button" class="btn small icon-button" id="btn-cam-center" aria-label="Вернуть камеру к герою" data-icon-tooltip="Вернуть камеру к герою и включить слежение · Home" title="Вернуть камеру к герою и включить слежение · Home">⌖</button></div>
+        <div class="minimap-controls" aria-label="Масштаб миникарты"><button type="button" class="btn small" id="btn-mini-minus" title="Отдалить миникарту">−</button><span id="mini-zoom-label" class="small">100%</span><button type="button" class="btn small" id="btn-mini-plus" title="Приблизить миникарту к герою">+</button><button type="button" class="btn small" id="btn-mini-reset" title="Нормализация: показать всю карту">⟲</button></div>
+        <div id="hud-location" class="small"></div>
+        <div id="hud-z" class="small"></div>
+        <div id="hud-veh" class="small hidden" title="Машина (шаг 14): прочность, топливо, ваше место. Y — выйти, Shift+Y — панель"></div>
+        <div id="hud-players" class="small" title="Игроки в мире"></div>
+      </div>
+      <div id="hotbar" title=""></div>
+      <button type="button" class="btn hud-inv-btn" id="btn-inventory" title="Инвентарь и экипировка (I)">🎒</button>
+      <div class="hud-loot" id="auto-loot-controls" aria-label="Автосбор предметов"><span class="hud-loot-label">Автосбор</span><button type="button" class="btn small icon-button" data-loot="all" aria-label="Всё рядом" data-icon-tooltip="Всё рядом — автоматически собирать все предметы в радиусе подбора" aria-pressed="false" title="Всё рядом — автоматически собирать все предметы в радиусе подбора">📦</button><button type="button" class="btn small icon-button" data-loot="needed" aria-label="Нужное" data-icon-tooltip="Нужное — вода, еда, мана и подходящие боеприпасы; при сборе всего подбираются первыми" aria-pressed="false" title="Нужное — вода, еда, мана и подходящие боеприпасы; при сборе всего подбираются первыми">💧</button><button type="button" class="btn small icon-button" data-loot="best" aria-label="Лучшее" data-icon-tooltip="Лучшее — оружие и броня с параметрами лучше экипированных" aria-pressed="false" title="Лучшее — оружие и броня с параметрами лучше экипированных">⭐</button></div>
+      <div class="hud-auto-use" id="auto-use-controls" aria-label="Автопомощь из сумки"><span class="hud-loot-label">Автопомощь</span><button type="button" class="btn small icon-button" data-autouse="hp" aria-label="Лечение" data-icon-tooltip="Лечение — съесть, выпить или применить аптечку из сумки, когда здоровье ниже порога" aria-pressed="false" title="Лечение — съесть, выпить или применить аптечку из сумки, когда здоровье ниже порога">❤</button><button type="button" class="btn small icon-button" data-autouse="mp" aria-label="Мана" data-icon-tooltip="Мана — выпить тоник маны из сумки, когда мана ниже порога" aria-pressed="false" title="Мана — выпить тоник маны из сумки, когда мана ниже порога">🔷</button><button type="button" class="btn small icon-button" data-autouse="stamina" aria-label="Выносливость" data-icon-tooltip="Выносливость — вода или стимулятор из сумки, когда выносливость ниже порога" aria-pressed="false" title="Выносливость — вода или стимулятор из сумки, когда выносливость ниже порога">⚡</button><button type="button" class="btn small icon-button" data-autouse="food" aria-label="Еда" data-icon-tooltip="Еда — поесть из сумки, когда сытость ниже порога (если в мире включено выживание)" aria-pressed="false" title="Еда — поесть из сумки, когда сытость ниже порога (если в мире включено выживание)">🍖</button><button type="button" class="btn small icon-button" data-autouse="water" aria-label="Вода" data-icon-tooltip="Вода — попить из сумки, когда воды ниже порога (сначала чистая)" aria-pressed="false" title="Вода — попить из сумки, когда воды ниже порога (сначала чистая)">🥤</button><button type="button" class="btn small icon-button" data-autouse="rest" aria-label="Бодрость" data-icon-tooltip="Бодрость — кофе или стимулятор из сумки, когда бодрость ниже порога" aria-pressed="false" title="Бодрость — кофе или стимулятор из сумки, когда бодрость ниже порога">☕</button><button type="button" class="btn small icon-button" data-autouse="rad" aria-label="Антирадин" data-icon-tooltip="Антирадин — принять из сумки, когда радиация выше порога" aria-pressed="false" title="Антирадин — принять из сумки, когда радиация выше порога">☢</button><button type="button" class="btn small icon-button" data-autouse="air" aria-label="Воздух" data-icon-tooltip="Воздух — баллон из сумки под водой, когда воздуха мало" aria-pressed="false" title="Воздух — баллон из сумки под водой, когда воздуха мало">🫧</button><button type="button" class="btn small icon-button" data-autouse="vehFuel" aria-label="Заправка" data-icon-tooltip="Заправка — за рулём долить топливо из сумки, когда бак ниже порога (как J)" aria-pressed="false" title="Заправка — за рулём долить топливо из сумки, когда бак ниже порога (как J)">⛽</button><button type="button" class="btn small icon-button" data-autouse="vehRepair" aria-label="Ремонт машины" data-icon-tooltip="Ремонт машины — за рулём чинить автозапчастями из сумки, когда прочность ниже порога (как O)" aria-pressed="false" title="Ремонт машины — за рулём чинить автозапчастями из сумки, когда прочность ниже порога (как O)">🔧</button></div><div class="hud-auto-combat" id="auto-combat-controls" aria-label="Автоматический бой"><span class="hud-loot-label">Автобой</span><button type="button" class="btn small icon-button" data-auto-combat="melee" aria-label="Ближний бой" data-icon-tooltip="Ближний бой — атаковать ближайшего врага оружием ближнего боя" aria-pressed="false" title="Ближний бой — атаковать ближайшего врага оружием ближнего боя">⚔</button><button type="button" class="btn small icon-button" data-auto-combat="ranged" aria-label="Дальний бой" data-icon-tooltip="Дальний бой — стрелять по ближайшему видимому врагу в пределах дальности" aria-pressed="false" title="Дальний бой — стрелять по ближайшему видимому врагу в пределах дальности">🎯</button><button type="button" class="btn small icon-button" data-auto-combat="magic" aria-label="Автомагия" data-icon-tooltip="Автомагия — применять заклинания с панели 1–0: атаки, лечение и защиту" aria-pressed="false" title="Автомагия — применять заклинания с панели 1–0: атаки, лечение и защиту">✦</button></div><div id="attack-mode-controls" class="hud-attack-modes" aria-label="Режим оружия">
+        <button type="button" class="btn small icon-button" data-native-icon="true" data-attack-mode="normal" title="Обычная атака" aria-label="Обычная атака">⚔</button>
+        <button type="button" class="btn small icon-button" data-native-icon="true" data-attack-mode="special" title="Особая атака: усиленный удар, медленнее, двойная выносливость; ближнее оружие бьёт по дуге" aria-label="Особая атака">✹</button>
+        <button type="button" class="btn small icon-button" data-native-icon="true" data-attack-mode="throw" title="Метание без потери оружия. Две руки — броски по очереди" aria-label="Метание по очереди">➶</button>
+        <button type="button" class="btn small icon-button" data-native-icon="true" data-attack-mode="dualThrow" title="Одновременно метнуть оружие из обеих рук без его потери" aria-label="Двойной бросок">⇈</button>
+        <button type="button" class="btn small icon-button" data-native-icon="true" data-super-attack title="Суперудар: заряжается попаданиями; нажмите и атакуйте" aria-label="Суперудар">★</button>
+      </div>
+      <button type="button" class="btn hud-stats-btn" id="btn-stats" title="Персонаж: характеристики, опыт, смерти (C)">📊 <span id="stats-badge" class="badge hidden" title="Не вложенные очки характеристик"></span></button>
+      <button type="button" class="btn hud-build-btn" id="btn-build" title="Строительство базы (B): постройки, ремонт, снос, допуск друзей">🔨</button>
+      <button type="button" class="btn hud-craft-btn" id="btn-craft" title="Книга рецептов и очередь крафта (K)">📖</button>
+      <button type="button" class="btn hud-spells-btn" id="btn-spells" title="Книга заклинаний (P): изученные заклинания, клавиши 1–0, телепатия и передача">✨</button>
+      <div id="build-window" class="hud-panel hidden" role="dialog" aria-label="Строительство"></div>
+      <div id="craft-window" class="hud-panel hidden" role="dialog" aria-label="Книга рецептов"></div>
+      <div id="spell-window" class="hud-panel hidden" role="dialog" aria-label="Книга заклинаний"></div>
+      <div id="cast-bar" class="hidden" title="Чтение заклинания: не двигайтесь, урон прерывает"><div class="fill"></div><span class="lbl"></span></div>
+      <button type="button" class="btn hud-quests-btn" id="btn-quests" title="Журнал заданий и репутация фракций (F2)">📜 <span id="quests-badge" class="badge hidden" title="Новое задание"></span></button>
+      <button type="button" class="btn hud-family-btn" id="btn-family" title="Семья (F3): члены семьи на базе, их дела, поход, союз с игроком, отношения с жителями">👪 <span id="family-badge" class="badge hidden" title="Предложение создать семью"></span></button>
+      <button type="button" class="btn hud-voice-btn" id="btn-voice" title="Голосовой чат (F4): войти, рация (V) или голосовая активация, каналы, громкость игроков, микрофон. 🔊 — вы в эфире, 🔇 — голос заглушён администратором">🎙</button>
+      <div id="voice-window" class="hud-panel hidden" role="dialog" aria-label="Голосовой чат">
+        <div class="inv-head"><b>Голосовой чат</b><button type="button" class="btn small" id="btn-voice-close" title="Закрыть (F4 или Esc)">✕</button></div>
+        <div id="voice-body"></div>
+      </div>
+      <div id="family-window" class="hud-panel hidden" role="dialog" aria-label="Семья">
+        <div class="inv-head"><b>Семья</b><button type="button" class="btn small" id="btn-family-close" title="Закрыть (F3 или Esc)">✕</button></div>
+        <div id="family-body"></div>
+      </div>
+      <div id="quest-window" class="hud-panel hidden" role="dialog" aria-label="Журнал заданий">
+        <div class="inv-head"><b>Журнал заданий</b><button type="button" class="btn small" id="btn-quest-close" title="Закрыть (F2 или Esc)">✕</button></div>
+        <div id="quest-body"></div>
+      </div>
+      <div id="ending-window" class="hidden" role="dialog" aria-label="Концовка">
+        <div id="ending-body"></div>
+        <button type="button" class="btn primary" id="btn-ending-close" title="Закрыть итоги — мир остаётся, игра продолжается (Esc)">Продолжить игру</button>
+      </div>
+      <div id="npc-window" class="hud-panel hidden" role="dialog" aria-label="Разговор">
+        <div class="inv-head"><b id="npc-title">Разговор</b><button type="button" class="btn small" id="btn-npc-close" title="Закрыть (Esc)">✕</button></div>
+        <div id="npc-body"></div>
+      </div>
+      <div id="veh-window" class="hud-panel hidden" role="dialog" aria-label="Транспорт">
+        <div class="inv-head"><b>Транспорт</b><button type="button" class="btn small" id="btn-veh-close" title="Закрыть (Shift+Y)">✕</button></div>
+        <div id="veh-body"></div>
+      </div>
+      <div id="chest-window" class="hud-panel hidden" role="dialog" aria-label="Сундук"></div>
+      <div id="corpse-loot-window" class="hud-panel hidden" role="dialog" aria-label="Обыск трупа">
+        <div class="inv-head"><b id="corpse-loot-title">Труп</b><button type="button" class="btn small" id="btn-corpse-close" title="Закрыть">✕</button></div>
+        <div id="corpse-loot-items"></div>
+      </div>
+      <div id="comp-bar" class="comp-bar hidden" aria-label="Спутники"></div>
+      <div id="comp-control-badge" class="comp-control-badge hidden" role="status" aria-live="polite" title="Вы управляете спутником: движение — WASD или щелчок по карте (стрелки — камера), ПКМ — атака, Shift+\ — следующий спутник. Герой идёт следом и защищается.">🎮 Вы управляете: <b class="ccb-name"></b> <button type="button" class="btn small" id="btn-comp-return" title="Вернуть управление герою (\)" data-icon-tooltip="Вернуть управление герою (\)" aria-label="Вернуть управление герою">↩ К герою <kbd>\</kbd></button></div>
+      <div id="turret-panel" class="hud-panel hidden" role="dialog" aria-label="Турель" title="Ваша турель: щёлкните по ней рядом, чтобы открыть эту панель"></div>
+      <div id="stats-window" class="hud-panel hidden" role="dialog" aria-label="Персонаж">
+        <div class="inv-head"><b>Персонаж</b><button type="button" class="btn small" id="btn-stats-close" title="Закрыть (C или Esc)">✕</button></div>
+        <div id="stats-body"></div>
+      </div>
+      <div id="inv-window" class="hud-panel hidden" role="dialog" aria-label="Инвентарь">
+        <div class="inv-head">
+          <b title="Вещи героя: надетые слои и сумка. Все действия проверяет сервер">Инвентарь</b>
+          <span class="muted small floating-expanded-only">двойной щелчок — надеть / снять / использовать · Shift при перетаскивании — половина стопки</span>
+          <button type="button" class="btn small floating-expanded-only" id="btn-inventory-commerce">Обмен / лавки</button>
+          <button type="button" class="btn small" data-window-minimize title="Свернуть" aria-label="Свернуть" aria-expanded="true">−</button>
+          <button type="button" class="btn small" id="btn-inv-close" title="Закрыть (I или Esc)">✕</button>
+        </div>
+        <div class="inv-body">
+          <div class="inv-doll">
+            <div class="inv-col" id="inv-col-left"></div>
+            <canvas id="inv-doll-canvas" width="176" height="320" title="Ваш герой с надетыми вещами. Слои: бельё → нательное → верхняя одежда → броня; плащ и рюкзак — на спине"></canvas>
+            <div class="inv-col" id="inv-col-right"></div>
+            <div class="inv-hands" id="inv-hands"></div>
+          </div>
+          <div class="inv-side">
+            <div class="inv-bar" id="inv-weight"><div class="fill"></div><span class="val"></span></div>
+            <div class="inv-bar cells" id="inv-cells-count"><div class="fill"></div><span class="val"></span></div>
+            <div class="inv-cell-nav inv-sort"><label for="inv-sort-mode">Сортировка</label><select id="inv-sort-mode" title="Порядок сортировки сумки: по порядку (тип, затем качество и уровень — лучшее первым), качество, тип, количество, цена, вес, название"></select><button type="button" class="btn small" id="inv-sort-dir" title="Направление сортировки" aria-label="Направление сортировки">↓</button><button type="button" class="btn small" id="btn-inv-sort" title="Отсортировать сумку (одинаковые стопки складываются вместе)">⇅ Сортировать</button></div><div class="inv-cell-nav"><label for="inv-view-mode">Просмотр</label><select id="inv-view-mode" title="Прокрутка — вся сумка в ограниченной области; страницы — по 512 ячеек"><option value="scroll">Прокрутка</option><option value="pages">Страницы</option></select><button type="button" class="btn small hidden" id="inv-prev-page">←</button><span id="inv-page-label" class="small"></span><button type="button" class="btn small hidden" id="inv-next-page">→</button></div>
+            <div class="inv-grid-scroll"><div id="inv-grid" class="inv-grid"></div></div>
+            <div id="inv-drop" class="inv-drop" title="Перетащите сюда предмет, чтобы выбросить его на землю под ноги. Его увидят и смогут поднять все игроки в мире">⬇ Выбросить на землю</div>
+            <div id="inv-stats" class="inv-stats small"></div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn hud-scenery-btn" id="btn-scenery-view" data-native-icon title="Вид препятствий" aria-label="Вид препятствий"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10l8-5 8 5v10H4ZM9 20v-7h6v7"/></svg></button>
+      <button type="button" class="btn hud-menu-btn" id="btn-game-menu" title="Меню (Esc)">☰</button>
+      <button type="button" class="btn hud-admin-btn hidden" id="btn-admin" title="Панель администратора (F10): игроки, герои, спавн, сообщения, события, журнал, мир, режим бога">🛡</button>
+      <button type="button" class="btn hud-admin-btn hidden" id="btn-cheat" title="Чит-панель (F9): бессмертие, бесконечные патроны, управление транспортом, скорость, правка героя, телепорт, предметы, спавн и рецепты. Только администратору или всем при game.cheatsForAll">🧪</button>
+      <div id="admin-panel" class="admin-panel hidden" role="dialog" aria-label="Панель администратора"></div>
+      <div id="cheat-panel" class="admin-panel cheat-panel hidden" role="dialog" aria-label="Чит-панель"></div>
+      <div id="commerce-window" class="hud-panel hidden" role="dialog" aria-label="Обмен и лавки">
+        <div class="inv-head"><b>Обмен и лавки</b><button type="button" class="btn small floating-expanded-only" data-commerce="refresh">Обновить</button><button type="button" class="btn small" data-window-minimize aria-label="Свернуть">−</button><button type="button" class="btn small" id="btn-commerce-close" aria-label="Закрыть">✕</button></div>
+        <div class="commerce-actions" id="commerce-tabs"></div><div id="commerce-body"></div>
+      </div>
+      <div id="game-toast"></div>
+      <div id="announce-banner" class="hidden" role="alert" title="Объявление администратора"></div>
+      <div id="chat" class="hud-panel">
+        <div id="chat-log" role="log" aria-live="polite" title="Чат мира. Белый — всем, розовый — личные, серый — системные, золотой — объявления. Щелчок по имени — личное сообщение"></div>
+        <form id="chat-form" class="hidden" autocomplete="off">
+          <input id="chat-input" maxlength="300" placeholder="Всем в мире · /w имя — личное · /help — команды"
+                 title="Enter — отправить, Esc — отмена. /w имя текст — личное сообщение, /r — ответить, /who — кто в мире">
+        </form>
+      </div>
+      <button type="button" class="btn hud-chat-btn" id="btn-chat-toggle" aria-pressed="true" title="Показать / скрыть чат (L). Enter — написать сообщение">💬 <span id="chat-unread" class="badge hidden" title="Непрочитанные сообщения"></span></button>
+      <div id="game-menu" class="overlay hidden">
+        <div class="panel menu-panel">
+          <h2>Меню</h2>
+          <p class="muted small">Игра не останавливается: мир общий, другие игроки продолжают действовать. Позиция героя сохраняется сервером автоматически.</p>
+          <button type="button" class="btn primary" id="btn-menu-continue" title="Вернуться в игру (Esc)">Продолжить</button>
+          <button type="button" class="btn hidden" id="btn-menu-save" title="Сохранить мир сейчас: героев, позиции, врагов, турели. Мир и так сохраняется сам по таймеру и при выходе — кнопка для спокойствия перед рискованным делом. Доступна владельцу мира.">Сохранить</button>
+          <button type="button" class="btn" id="btn-menu-help" title="Справка по управлению и игре (F1)">Справка</button>
+          <button type="button" class="btn" id="btn-panels-reset" title="Сбросить перемещение, размер и режим отображения игровых панелей">Вернуть панели по умолчанию</button>
+          <fieldset class="accessibility-settings"><legend>Трупы — общее для кооператива</legend>
+            <label for="corpse-lifetime">Время хранения, секунд (0–65536)</label>
+            <input type="number" id="corpse-lifetime" min="0" max="65536" step="1" value="60">
+            <button type="button" class="btn small" id="btn-corpse-apply">Применить для всех</button>
+          </fieldset>
+          <fieldset class="accessibility-settings"><legend>Враги — общее для кооператива</legend>
+            <label for="enemy-respawn-sec">Возрождение после зачистки, секунд (0–65536)</label>
+            <input type="number" id="enemy-respawn-sec" min="0" max="65536" step="1" value="90">
+            <label for="enemy-population">Цель числа врагов (0–250; цель случайно ±10%)</label>
+            <input type="number" id="enemy-population" min="0" max="250" step="1" value="100">
+            <button type="button" class="btn small" id="btn-spawn-apply">Применить для всех</button>
+          </fieldset>
+          <fieldset class="accessibility-settings"><legend>Сложность и выпавшие вещи</legend>
+            <label for="server-difficulty">Сложность этого мира</label>
+            <select id="server-difficulty"></select>
+            <label for="ground-item-ttl">Срок выпавших вещей, секунд (0–65536)</label>
+            <input type="number" id="ground-item-ttl" min="0" max="65536" step="1" value="7200">
+            <label for="story-npc-respawn-sec">Возвращение жителей и сюжетных персонажей, секунд (0–65536)</label>
+            <input type="number" id="story-npc-respawn-sec" min="0" max="65536" step="1" value="300">
+            <label for="story-item-respawn-sec">Возвращение подобранных сюжетных материалов, секунд (0–65536)</label>
+            <input type="number" id="story-item-respawn-sec" min="0" max="65536" step="1" value="300">
+            <button type="button" class="btn small" id="btn-difficulty-apply">Применить для всех</button>
+            <p class="small muted">Режим меняет уровни и характеристики врагов. На сложных режимах вещи могут выпасть из сумки или экипировки при смерти. В хардкоре смерть сбрасывает героя к началу. Постоянные тайники не исчезают. Сюжетные запасы могут появляться повторно, поэтому возможны дубликаты.</p>
+          </fieldset>
+          <fieldset class="accessibility-settings"><legend>Доступность</legend>
+            <label for="ui-text-size">Размер текста</label>
+            <select id="ui-text-size" title="Увеличить текст интерфейса. Настройка применяется сразу и сохраняется в браузере.">
+              <option value="80">Малый</option><option value="90">Средний</option><option value="100">Нормальный</option><option value="150">Большой</option><option value="200">Огромный</option>
+            </select>
+            <button type="button" class="btn small" id="btn-text-size-reset">Обычный размер</button>
+            <label data-help="h-panels"><input type="checkbox" id="ui-tooltips-enabled" checked> Подсказки включены</label>
+            <label for="ui-tooltip-seconds" data-help="h-panels">Время показа подсказки, секунд</label>
+            <input type="number" id="ui-tooltip-seconds" value="5" min="1" max="65536" step="1" data-help="h-panels" title="Сколько секунд видна подсказка. По умолчанию 5. Настройка действует сразу только у вас.">
+
+          </fieldset>
+          <div class="gfx-row"><label title="Художественный — текстуры, переходы биомов, свет дня и ночи, частицы, анимации. Простой — прежний рисунок для слабых компьютеров (меняется при следующем входе в мир)">Рендер
+            <select id="gfx-renderer"><option value="art">художественный</option><option value="classic">простой (прежний)</option></select></label>
+            <label title="Низкое — без переходов, частиц и теней, свет ровный; среднее — всё, частиц вдвое меньше; высокое — больше объектов и частиц (меняется сразу)">Качество
+            <select id="gfx-quality"><option value="low">низкое</option><option value="medium">среднее</option><option value="high">высокое</option></select></label>
+            <label title="Ограничение кадров в секунду: 30 — тише и холоднее ноутбук, экономнее батарея; без ограничения — сколько успеет видеокарта. В простое (герой стоит, вокруг тихо) кадров ещё меньше">FPS
+            <select id="gfx-fps"><option value="30">30</option><option value="60">60</option><option value="0">без ограничения</option></select></label></div>
+          <div class="gfx-row gfx-checks">
+            <label title="От батареи ноутбука — низкое качество и не больше 30 FPS; с зарядкой — как выбрано. Работает в браузерах с Battery API (Chrome, Edge)"><input type="checkbox" id="gfx-battery"> Экономия батареи</label>
+            <label title="Если несколько секунд подряд кадров меньше нормы, качество снижается на ступень (с подсказкой). Вернуть — здесь же, в «Качестве»"><input type="checkbox" id="gfx-auto"> Автокачество</label>
+            <label title="Оверлей производительности: FPS, время кадра, пинг, тик сервера, трафик, враги рядом (F8)"><input type="checkbox" id="gfx-overlay"> FPS и пинг (F8)</label>
+            <label title="Камера: мышь у края экрана сдвигает обзор (как в стратегиях). Вернуть к герою — Home"><input type="checkbox" id="gfx-edge"> Прокрутка у края</label>
+            <label title="Стрелки ← ↑ → ↓ двигают обзор (камеру), а W A S D — героя или спутника, которым вы управляете. Выключите — стрелки снова ведут героя, как WASD (обзор тогда — Ctrl+стрелки). Вернуть камеру к герою — Home" data-icon-tooltip="Стрелки — камера, WASD — герой"><input type="checkbox" id="gfx-arrows"> Стрелки — камера</label></div>
+          <div class="scenery-settings"><b>Обзор окружения</b>
+            <label>Окружение <select id="scenery-mode"><option value="solid">1 · Полный вид</option><option value="low">2 · Низкие остатки</option><option value="transparent">3 · Прозрачность в радиусе</option><option value="cutaway">4 · Сферический вырез</option></select></label>
+            <p class="muted small">Радиус режимов 3 и 4 равен наибольшей дальности надетого оружия, бортового оружия и изученной магии. Вне радиуса окружение остаётся целым.</p>
+            <label>Видимость прозрачных объектов <input type="range" id="scenery-opacity" min="5" max="80" step="5"><output id="scenery-opacity-value"></output></label>
+            <p class="muted small">Это только обзор: стены и горы сохраняют столкновения; туман войны остаётся. Настройки сохраняются.</p>
+          </div>
+          <button type="button" class="btn" id="btn-menu-exit" title="Выйти из мира (позиция сохранится) и вернуться к списку миров">Выйти из мира</button>
+        </div>
+      </div>
+      <div id="net-status" class="overlay hidden" role="alert">
+        <div class="panel menu-panel">
+          <h2>Связь с сервером</h2>
+          <p id="net-status-text"></p>
+          <button type="button" class="btn" id="btn-net-exit" title="Прекратить попытки и вернуться к списку миров">К списку миров</button>
+        </div>
+      </div>
+      <div id="death-overlay" class="overlay hidden" role="alert">
+        <div class="panel menu-panel death-panel">
+          <h2>Вы погибли</h2>
+          <p id="death-cause" class="muted"></p>
+          <p id="death-stat" title="За каждую смерть теряется 1 очко случайной характеристики выше 1"></p>
+          <p id="death-count" class="muted small"></p>
+          <p class="muted small">Возрождение — в последнем посещённом поселении этого мира, а если их не было — в точке появления.</p>
+          <button type="button" class="btn primary" id="btn-respawn" title="Вернуться в мир, когда закончится отсчёт">Возродиться</button>
+        </div>
+      </div>
+      <div id="game-loading" class="overlay hidden"><div class="panel"><p id="game-loading-text">Генерация мира...</p></div></div>
+    </section>
+  </div>
+
+  <div id="item-tip" class="item-tip hidden" role="tooltip"></div>
+
+  <!-- Справка -->
+  <button type="button" id="btn-help" class="help-btn" title="Справка (F1)">?</button>
+  <div id="help-overlay" class="overlay hidden">
+    <div class="panel help-panel" role="dialog" aria-label="Справка">
+      <button type="button" class="btn help-close" id="btn-help-close" title="Закрыть (Esc)">✕</button>
+      <div id="help-body"></div>
+    </div>
+  </div>
+  <script src="/shared/character-rules.js"></script>
+  <script src="/shared/worldgen.js"></script>
+  <script src="/shared/difficulty.js"></script>
+  <script src="/shared/movement.js"></script>
+  <script src="/shared/houses.js"></script>
+  <script src="/shared/regions.js"></script>
+  <script src="/shared/levels.js"></script>
+  <script src="/shared/vehicles.js"></script>
+  <script src="/shared/protocol.js"></script>
+  <script src="/shared/magic.js"></script>
+  <script src="/shared/items.js"></script>
+  <script src="/shared/inventory.js"></script>
+  <script src="/shared/settlements.js"></script>
+  <script src="/shared/factions.js"></script>
+  <script src="/shared/quests.js"></script>
+  <script src="/shared/family.js"></script>
+  <script src="/shared/voice.js"></script>
+  <script src="/shared/art.js"></script>
+  <script src="/shared/combat.js"></script>
+  <script src="/shared/enemies.js"></script>
+  <script src="/shared/survival.js"></script>
+  <script src="/shared/building.js"></script>
+  <script src="/shared/worldedit.js"></script>
+  <script src="/shared/fog.js"></script>
+  <script src="/shared/camera.js"></script>
+  <script src="/shared/crafting.js"></script>
+  <script src="/shared/companions.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

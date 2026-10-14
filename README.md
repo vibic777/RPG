@@ -4,6 +4,10 @@
 **GitHub About / English:** Just for fun, as Torvalds put it: an experiment toward an interesting RPG. Not yet what I want, but the ideas keep coming, and I keep at it.
 **Описание GitHub / Русский:** Just for fun, как говорил Торвальдс: эксперимент ради интересной RPG. Пока не то, что хочется, но мыслей много, и я всё равно её делаю.
 
+**Лицензия:** [PolyForm Noncommercial 1.0.0](LICENSE). Некоммерческое использование разрешено. Коммерческое использование — только по отдельному соглашению с vibic777.
+**License:** [PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial use is allowed. Commercial use requires a separate agreement with vibic777.
+
+
 Just for fun. Как говорил Линус Торвальдс — просто потому что хочется. Сейчас это эксперимент: ещё не та RPG, которую хочется увидеть, мыслей много и даётся трудно, но цель всё та же — интересная ролевая игра.
 
 Браузерная кооперативная RPG (1–8 игроков) в постапокалиптическом мире, где технологии смешаны с магией. Полная концепция — в [GDD.md](GDD.md), история изменений — в [CHANGELOG.md](CHANGELOG.md).

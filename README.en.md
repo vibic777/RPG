@@ -2,6 +2,9 @@
 
 [Русский](README.md) · **English**
 
+**License:** [PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial use is allowed. Commercial use requires a separate agreement with vibic777.
+
+
 Just for fun. As Linus Torvalds put it, because I want to. This is an experiment: not yet the RPG I am aiming for, full of unfinished thoughts and hard going, but the aim is still an interesting role-playing game.
 
 A cooperative browser RPG for 1–8 players in a post-apocalyptic world where technology and magic coexist. The project is in early development; the current implementation includes a server, accounts, roles, login, and character creation.
